@@ -104,19 +104,16 @@ function loadState() {
 }
 
 function clearAllData() {
-    if (confirm('⚠️ This will delete ALL your data including grades, semesters, and custom settings. This cannot be undone. Are you sure?')) {
-        localStorage.removeItem('gpaCalculatorState');
-        state = {
-            rubric: [...DEFAULT_RUBRIC],
-            subjectTypes: [...DEFAULT_TYPES],
-            years: []
-        };
-        renderRubricDisplay();
-        renderSubjectTypes();
-        renderYears();
-        calculateResults();
-        alert('✅ All data has been cleared!');
-    }
+    localStorage.removeItem('gpaCalculatorState');
+    state = {
+        rubric: [...DEFAULT_RUBRIC],
+        subjectTypes: [...DEFAULT_TYPES],
+        years: []
+    };
+    renderRubricDisplay();
+    renderSubjectTypes();
+    renderYears();
+    calculateResults();
 }
 
 // Rubric Management
@@ -333,16 +330,14 @@ function addYear() {
 }
 
 function removeYear(yearIndex) {
-    if (confirm(`Remove Year ${state.years[yearIndex].number}?`)) {
-        state.years.splice(yearIndex, 1);
-        // Renumber remaining years
-        state.years.forEach((year, idx) => {
-            year.number = idx + 1;
-        });
-        saveState();
-        renderYears();
-        calculateResults();
-    }
+    state.years.splice(yearIndex, 1);
+    // Renumber remaining years
+    state.years.forEach((year, idx) => {
+        year.number = idx + 1;
+    });
+    saveState();
+    renderYears();
+    calculateResults();
 }
 
 function renderYears() {
