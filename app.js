@@ -377,6 +377,8 @@ function renderYears() {
     // Add event listeners for year removal
     container.querySelectorAll('.year-remove-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             const yearIndex = parseInt(e.target.closest('button').dataset.yearIndex);
             removeYear(yearIndex);
         });
@@ -517,6 +519,8 @@ function addSubjectEventListeners() {
     // Remove subject buttons
     document.querySelectorAll('.subject-remove-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             const yearIndex = parseInt(e.target.closest('button').dataset.yearIndex);
             const semIndex = parseInt(e.target.closest('button').dataset.semIndex);
             const subIndex = parseInt(e.target.closest('button').dataset.subIndex);
