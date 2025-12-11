@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GPA/CGPA Calculator - Law School Edition</title>
-    <meta name="description" content="Calculate your GPA and CGPA with a customizable grading rubric. Designed for law school students with support for law and non-law subjects.">
+    <meta name="description"
+        content="Calculate your GPA and CGPA with a customizable grading rubric. Designed for law school students with support for law and non-law subjects.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container">
         <!-- Header -->
@@ -32,7 +35,7 @@
                     <span id="toggleRubricText">Edit</span>
                 </button>
             </div>
-            
+
             <div id="rubricDisplay" class="rubric-display">
                 <!-- Rubric items will be displayed here -->
             </div>
@@ -54,21 +57,54 @@
             </div>
         </section>
 
-        <!-- Semesters Section -->
-        <section class="card semesters-section">
+        <!-- Subject Types Section -->
+        <section class="card types-section">
             <div class="card-header">
                 <h2>
-                    <span class="icon">📚</span>
-                    Semesters
+                    <span class="icon">📋</span>
+                    Subject Types & Credits
                 </h2>
-                <button id="addSemester" class="btn btn-primary">
-                    <span class="btn-icon">+</span>
-                    Add Semester
+                <button id="toggleTypes" class="btn btn-secondary">
+                    <span id="toggleTypesText">Edit</span>
                 </button>
             </div>
 
-            <div id="semestersContainer" class="semesters-container">
-                <!-- Semester cards will be generated here -->
+            <div id="typesDisplay" class="rubric-display">
+                <!-- Subject types will be displayed here -->
+            </div>
+
+            <div id="typesEditor" class="rubric-editor hidden">
+                <div id="typesInputs" class="rubric-inputs">
+                    <!-- Type input fields will be generated here -->
+                </div>
+                <div class="rubric-actions">
+                    <button id="addType" class="btn btn-outline">
+                        <span class="btn-icon">+</span>
+                        Add Type
+                    </button>
+                    <button id="resetTypes" class="btn btn-outline">
+                        <span class="btn-icon">↺</span>
+                        Reset to Default
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Years Section -->
+        <section class="card years-section">
+            <div class="card-header">
+                <h2>
+                    <span class="icon">📚</span>
+                    Academic Years
+                </h2>
+                <button id="addYear" class="btn btn-primary">
+                    <span class="btn-icon">+</span>
+                    Add Year
+                </button>
+            </div>
+
+            <div id="yearsContainer" class="years-container">
+                <!-- Year cards will be generated here -->
             </div>
         </section>
 
@@ -82,6 +118,10 @@
             </div>
 
             <div class="results-grid">
+                <div class="result-card">
+                    <div class="result-label">Total Years</div>
+                    <div class="result-value" id="totalYears">0</div>
+                </div>
                 <div class="result-card">
                     <div class="result-label">Total Semesters</div>
                     <div class="result-value" id="totalSemesters">0</div>
@@ -99,11 +139,14 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>💡 <strong>Note:</strong> English subject in Semester 1 is automatically excluded from GPA calculation</p>
-            <p>📖 Law subjects: 4 credits | Non-law subjects: 3 credits</p>
+            <p>💡 <strong>Note:</strong> English subject in Semester 1 is automatically excluded from GPA calculation
+            </p>
+            <p>📖 Subject types and credits are fully customizable in the settings above</p>
+            <p>📅 Each year contains 2 semesters for easy organization</p>
         </footer>
     </div>
 
     <script src="app.js"></script>
 </body>
+
 </html>

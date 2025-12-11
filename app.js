@@ -9,10 +9,17 @@ const DEFAULT_RUBRIC = [
     { grade: 'P', points: 7 }
 ];
 
+// Default subject types
+const DEFAULT_TYPES = [
+    { name: 'Law', credits: 4 },
+    { name: 'Non-Law', credits: 3 }
+];
+
 // Application state
 let state = {
     rubric: [...DEFAULT_RUBRIC],
-    semesters: []
+    subjectTypes: [...DEFAULT_TYPES],
+    years: []
 };
 
 // Initialize application
@@ -20,7 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
     loadState();
     initializeEventListeners();
     renderRubricDisplay();
-    renderSemesters();
+    renderSubjectTypes();
+    renderYears();
     calculateResults();
 });
 
@@ -29,7 +37,10 @@ function initializeEventListeners() {
     document.getElementById('toggleRubric').addEventListener('click', toggleRubricEditor);
     document.getElementById('addGrade').addEventListener('click', addGradeToRubric);
     document.getElementById('resetRubric').addEventListener('click', resetRubric);
-    document.getElementById('addSemester').addEventListener('click', addSemester);
+    document.getElementById('toggleTypes').addEventListener('click', toggleTypesEditor);
+    document.getElementById('addType').addEventListener('click', addSubjectType);
+    document.getElementById('resetTypes').addEventListener('click', resetTypes);
+    document.getElementById('addYear').addEventListener('click', addYear);
 }
 
 // Local Storage Functions
@@ -40,7 +51,35 @@ function saveState() {
 function loadState() {
     const saved = localStorage.getItem('gpaCalculatorState');
     if (saved) {
-        state = JSON.parse(saved);
+        const loadedState = JSON.parse(saved);
+        // Migrate old state format to new format
+        if (loadedState.semesters && !loadedState.years) {
+            // Convert old semester-based format to year-based format
+            state.rubric = loadedState.rubric || [...DEFAULT_RUBRIC];
+            state.subjectTypes = loadedState.subjectTypes || [...DEFAULT_TYPES];
+            state.years = [];
+
+            // Group semesters into years (2 per year)
+            for (let i = 0; i < loadedState.semesters.length; i += 2) {
+                const yearNumber = Math.floor(i / 2) + 1;
+                const year = {
+                    number: yearNumber,
+                    semesters: [
+                        loadedState.semesters[i] || { number: 1, subjects: [] }
+                    ]
+                };
+                if (loadedState.semesters[i + 1]) {
+                    year.semesters.push(loadedState.semesters[i + 1]);
+                }
+                state.years.push(year);
+            }
+        } else {
+            state = loadedState;
+            // Ensure subjectTypes exists for backward compatibility
+            if (!state.subjectTypes) {
+                state.subjectTypes = [...DEFAULT_TYPES];
+            }
+        }
     }
 }
 
@@ -50,7 +89,7 @@ function toggleRubricEditor() {
     const editor = document.getElementById('rubricEditor');
     const toggleBtn = document.getElementById('toggleRubric');
     const toggleText = document.getElementById('toggleRubricText');
-    
+
     if (editor.classList.contains('hidden')) {
         display.classList.add('hidden');
         editor.classList.remove('hidden');
@@ -81,44 +120,55 @@ function renderRubricEditor() {
             <div class="form-group">
                 <label class="form-label">Grade</label>
                 <input type="text" class="form-input" value="${item.grade}" 
-                    onchange="updateRubricGrade(${index}, this.value)">
+                    data-index="${index}" data-field="grade" class="rubric-grade-input">
             </div>
             <div class="form-group">
                 <label class="form-label">Points</label>
                 <input type="number" class="form-input" value="${item.points}" 
                     step="0.5" min="0" max="10"
-                    onchange="updateRubricPoints(${index}, this.value)">
+                    data-index="${index}" data-field="points" class="rubric-points-input">
             </div>
-            <button class="btn btn-danger" onclick="removeGradeFromRubric(${index})" 
+            <button class="btn btn-danger rubric-remove-btn" data-index="${index}"
                 style="margin-top: 1.5rem;">
                 <span class="btn-icon">×</span>
             </button>
         </div>
     `).join('');
-}
 
-function updateRubricGrade(index, value) {
-    state.rubric[index].grade = value.trim();
-    saveState();
-}
+    // Add event listeners
+    container.querySelectorAll('.rubric-grade-input').forEach(input => {
+        input.addEventListener('change', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            state.rubric[index].grade = e.target.value.trim();
+            saveState();
+            renderYears();
+        });
+    });
 
-function updateRubricPoints(index, value) {
-    state.rubric[index].points = parseFloat(value);
-    saveState();
-    calculateResults();
+    container.querySelectorAll('.rubric-points-input').forEach(input => {
+        input.addEventListener('change', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            state.rubric[index].points = parseFloat(e.target.value);
+            saveState();
+            calculateResults();
+        });
+    });
+
+    container.querySelectorAll('.rubric-remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = parseInt(e.target.closest('button').dataset.index);
+            state.rubric.splice(index, 1);
+            renderRubricEditor();
+            saveState();
+            calculateResults();
+        });
+    });
 }
 
 function addGradeToRubric() {
     state.rubric.push({ grade: '', points: 0 });
     renderRubricEditor();
     saveState();
-}
-
-function removeGradeFromRubric(index) {
-    state.rubric.splice(index, 1);
-    renderRubricEditor();
-    saveState();
-    calculateResults();
 }
 
 function resetRubric() {
@@ -131,73 +181,202 @@ function resetRubric() {
     }
 }
 
-// Semester Management
-function addSemester() {
-    const semesterNumber = state.semesters.length + 1;
-    state.semesters.push({
-        number: semesterNumber,
-        subjects: []
-    });
-    saveState();
-    renderSemesters();
-    calculateResults();
-}
+// Subject Types Management
+function toggleTypesEditor() {
+    const display = document.getElementById('typesDisplay');
+    const editor = document.getElementById('typesEditor');
+    const toggleBtn = document.getElementById('toggleTypes');
+    const toggleText = document.getElementById('toggleTypesText');
 
-function removeSemester(index) {
-    if (confirm(`Remove Semester ${state.semesters[index].number}?`)) {
-        state.semesters.splice(index, 1);
-        // Renumber remaining semesters
-        state.semesters.forEach((sem, idx) => {
-            sem.number = idx + 1;
-        });
-        saveState();
-        renderSemesters();
-        calculateResults();
+    if (editor.classList.contains('hidden')) {
+        display.classList.add('hidden');
+        editor.classList.remove('hidden');
+        toggleText.textContent = 'Done';
+        renderTypesEditor();
+    } else {
+        display.classList.remove('hidden');
+        editor.classList.add('hidden');
+        toggleText.textContent = 'Edit';
+        renderSubjectTypes();
     }
 }
 
-function renderSemesters() {
-    const container = document.getElementById('semestersContainer');
-    
-    if (state.semesters.length === 0) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">📚 No semesters added yet</p>
-                <p>Click "Add Semester" to get started</p>
-            </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = state.semesters.map((semester, semIndex) => `
-        <div class="semester-card">
-            <div class="semester-header">
-                <h3 class="semester-title">Semester ${semester.number}</h3>
-                <div class="semester-actions">
-                    <button class="btn btn-outline" onclick="addSubject(${semIndex})">
-                        <span class="btn-icon">+</span>
-                        Add Subject
-                    </button>
-                    <button class="btn btn-danger" onclick="removeSemester(${semIndex})">
-                        <span class="btn-icon">×</span>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="subjects-container" id="subjects-${semIndex}">
-                ${renderSubjects(semester, semIndex)}
-            </div>
-            
-            <div class="semester-footer">
-                <div class="semester-gpa">
-                    GPA: <span id="gpa-${semIndex}">${calculateSemesterGPA(semester, semIndex)}</span>
-                </div>
-            </div>
+function renderSubjectTypes() {
+    const container = document.getElementById('typesDisplay');
+    container.innerHTML = state.subjectTypes.map(type => `
+        <div class="rubric-item">
+            <div class="rubric-grade">${type.name}</div>
+            <div class="rubric-points">${type.credits} credits</div>
         </div>
     `).join('');
 }
 
-function renderSubjects(semester, semIndex) {
+function renderTypesEditor() {
+    const container = document.getElementById('typesInputs');
+    container.innerHTML = state.subjectTypes.map((type, index) => `
+        <div class="rubric-input-row">
+            <div class="form-group">
+                <label class="form-label">Type Name</label>
+                <input type="text" class="form-input type-name-input" value="${type.name}" 
+                    data-index="${index}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Credits</label>
+                <input type="number" class="form-input type-credits-input" value="${type.credits}" 
+                    step="0.5" min="0" max="10"
+                    data-index="${index}">
+            </div>
+            <button class="btn btn-danger type-remove-btn" data-index="${index}"
+                style="margin-top: 1.5rem;">
+                <span class="btn-icon">×</span>
+            </button>
+        </div>
+    `).join('');
+
+    // Add event listeners
+    container.querySelectorAll('.type-name-input').forEach(input => {
+        input.addEventListener('change', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            state.subjectTypes[index].name = e.target.value.trim();
+            saveState();
+            renderYears();
+        });
+    });
+
+    container.querySelectorAll('.type-credits-input').forEach(input => {
+        input.addEventListener('change', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            state.subjectTypes[index].credits = parseFloat(e.target.value);
+            saveState();
+            calculateResults();
+        });
+    });
+
+    container.querySelectorAll('.type-remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = parseInt(e.target.closest('button').dataset.index);
+            state.subjectTypes.splice(index, 1);
+            renderTypesEditor();
+            saveState();
+            renderYears();
+            calculateResults();
+        });
+    });
+}
+
+function addSubjectType() {
+    state.subjectTypes.push({ name: '', credits: 0 });
+    renderTypesEditor();
+    saveState();
+}
+
+function resetTypes() {
+    if (confirm('Reset subject types to default values?')) {
+        state.subjectTypes = [...DEFAULT_TYPES];
+        renderTypesEditor();
+        renderSubjectTypes();
+        saveState();
+        renderYears();
+        calculateResults();
+    }
+}
+
+// Year Management
+function addYear() {
+    const yearNumber = state.years.length + 1;
+    state.years.push({
+        number: yearNumber,
+        semesters: [
+            { number: 1, subjects: [] },
+            { number: 2, subjects: [] }
+        ]
+    });
+    saveState();
+    renderYears();
+    calculateResults();
+}
+
+function removeYear(yearIndex) {
+    if (confirm(`Remove Year ${state.years[yearIndex].number}?`)) {
+        state.years.splice(yearIndex, 1);
+        // Renumber remaining years
+        state.years.forEach((year, idx) => {
+            year.number = idx + 1;
+        });
+        saveState();
+        renderYears();
+        calculateResults();
+    }
+}
+
+function renderYears() {
+    const container = document.getElementById('yearsContainer');
+
+    if (state.years.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">📚 No years added yet</p>
+                <p>Click "Add Year" to get started</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = state.years.map((year, yearIndex) => `
+        <div class="year-card">
+            <div class="year-header">
+                <h2 class="year-title">Year ${year.number}</h2>
+                <button class="btn btn-danger year-remove-btn" data-year-index="${yearIndex}">
+                    <span class="btn-icon">×</span>
+                    Remove Year
+                </button>
+            </div>
+            
+            <div class="semesters-grid">
+                ${year.semesters.map((semester, semIndex) => renderSemester(year, yearIndex, semester, semIndex)).join('')}
+            </div>
+        </div>
+    `).join('');
+
+    // Add event listeners for year removal
+    container.querySelectorAll('.year-remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const yearIndex = parseInt(e.target.closest('button').dataset.yearIndex);
+            removeYear(yearIndex);
+        });
+    });
+
+    // Add event listeners for subjects
+    addSubjectEventListeners();
+}
+
+function renderSemester(year, yearIndex, semester, semIndex) {
+    const globalSemIndex = (yearIndex * 2) + semIndex;
+    return `
+        <div class="semester-card">
+            <div class="semester-header">
+                <h3 class="semester-title">Semester ${semester.number}</h3>
+                <button class="btn btn-outline add-subject-btn" 
+                    data-year-index="${yearIndex}" data-sem-index="${semIndex}">
+                    <span class="btn-icon">+</span>
+                    Add Subject
+                </button>
+            </div>
+            
+            <div class="subjects-container">
+                ${renderSubjects(yearIndex, semIndex, semester, globalSemIndex)}
+            </div>
+            
+            <div class="semester-footer">
+                <div class="semester-gpa">
+                    GPA: <span id="gpa-${yearIndex}-${semIndex}">${calculateSemesterGPA(semester, globalSemIndex)}</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderSubjects(yearIndex, semIndex, semester, globalSemIndex) {
     if (semester.subjects.length === 0) {
         return `
             <div style="text-align: center; padding: 1rem; color: var(--text-muted);">
@@ -205,20 +384,24 @@ function renderSubjects(semester, semIndex) {
             </div>
         `;
     }
-    
+
     return semester.subjects.map((subject, subIndex) => `
         <div class="subject-row">
             <div class="form-group">
                 <label class="form-label">Subject Name</label>
-                <input type="text" class="form-input" 
+                <input type="text" class="form-input subject-name-input" 
                     placeholder="e.g., Legal Language" 
                     value="${subject.name}"
-                    onchange="updateSubjectName(${semIndex}, ${subIndex}, this.value)">
+                    data-year-index="${yearIndex}" 
+                    data-sem-index="${semIndex}" 
+                    data-sub-index="${subIndex}">
             </div>
             <div class="form-group">
                 <label class="form-label">Grade</label>
-                <select class="form-select" 
-                    onchange="updateSubjectGrade(${semIndex}, ${subIndex}, this.value)">
+                <select class="form-select subject-grade-select" 
+                    data-year-index="${yearIndex}" 
+                    data-sem-index="${semIndex}" 
+                    data-sub-index="${subIndex}">
                     <option value="">Select</option>
                     ${state.rubric.map(r => `
                         <option value="${r.grade}" ${subject.grade === r.grade ? 'selected' : ''}>
@@ -229,13 +412,21 @@ function renderSubjects(semester, semIndex) {
             </div>
             <div class="form-group">
                 <label class="form-label">Type</label>
-                <select class="form-select" 
-                    onchange="updateSubjectType(${semIndex}, ${subIndex}, this.value)">
-                    <option value="law" ${subject.type === 'law' ? 'selected' : ''}>Law (4)</option>
-                    <option value="non-law" ${subject.type === 'non-law' ? 'selected' : ''}>Non-Law (3)</option>
+                <select class="form-select subject-type-select" 
+                    data-year-index="${yearIndex}" 
+                    data-sem-index="${semIndex}" 
+                    data-sub-index="${subIndex}">
+                    ${state.subjectTypes.map(type => `
+                        <option value="${type.name}" ${subject.type === type.name ? 'selected' : ''}>
+                            ${type.name} (${type.credits})
+                        </option>
+                    `).join('')}
                 </select>
             </div>
-            <button class="btn btn-danger" onclick="removeSubject(${semIndex}, ${subIndex})"
+            <button class="btn btn-danger subject-remove-btn" 
+                data-year-index="${yearIndex}" 
+                data-sem-index="${semIndex}" 
+                data-sub-index="${subIndex}"
                 style="margin-top: 1.5rem;">
                 <span class="btn-icon">×</span>
             </button>
@@ -243,37 +434,89 @@ function renderSubjects(semester, semIndex) {
     `).join('');
 }
 
+function addSubjectEventListeners() {
+    // Add subject buttons
+    document.querySelectorAll('.add-subject-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const yearIndex = parseInt(e.target.closest('button').dataset.yearIndex);
+            const semIndex = parseInt(e.target.closest('button').dataset.semIndex);
+            addSubject(yearIndex, semIndex);
+        });
+    });
+
+    // Subject name inputs
+    document.querySelectorAll('.subject-name-input').forEach(input => {
+        input.addEventListener('change', (e) => {
+            const yearIndex = parseInt(e.target.dataset.yearIndex);
+            const semIndex = parseInt(e.target.dataset.semIndex);
+            const subIndex = parseInt(e.target.dataset.subIndex);
+            updateSubjectName(yearIndex, semIndex, subIndex, e.target.value);
+        });
+    });
+
+    // Subject grade selects
+    document.querySelectorAll('.subject-grade-select').forEach(select => {
+        select.addEventListener('change', (e) => {
+            const yearIndex = parseInt(e.target.dataset.yearIndex);
+            const semIndex = parseInt(e.target.dataset.semIndex);
+            const subIndex = parseInt(e.target.dataset.subIndex);
+            updateSubjectGrade(yearIndex, semIndex, subIndex, e.target.value);
+        });
+    });
+
+    // Subject type selects
+    document.querySelectorAll('.subject-type-select').forEach(select => {
+        select.addEventListener('change', (e) => {
+            const yearIndex = parseInt(e.target.dataset.yearIndex);
+            const semIndex = parseInt(e.target.dataset.semIndex);
+            const subIndex = parseInt(e.target.dataset.subIndex);
+            updateSubjectType(yearIndex, semIndex, subIndex, e.target.value);
+        });
+    });
+
+    // Remove subject buttons
+    document.querySelectorAll('.subject-remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const yearIndex = parseInt(e.target.closest('button').dataset.yearIndex);
+            const semIndex = parseInt(e.target.closest('button').dataset.semIndex);
+            const subIndex = parseInt(e.target.closest('button').dataset.subIndex);
+            removeSubject(yearIndex, semIndex, subIndex);
+        });
+    });
+}
+
 // Subject Management
-function addSubject(semIndex) {
-    state.semesters[semIndex].subjects.push({
+function addSubject(yearIndex, semIndex) {
+    const defaultType = state.subjectTypes.length > 0 ? state.subjectTypes[0].name : '';
+    state.years[yearIndex].semesters[semIndex].subjects.push({
         name: '',
         grade: '',
-        type: 'law'
+        type: defaultType
     });
     saveState();
-    renderSemesters();
+    renderYears();
 }
 
-function removeSubject(semIndex, subIndex) {
-    state.semesters[semIndex].subjects.splice(subIndex, 1);
+function removeSubject(yearIndex, semIndex, subIndex) {
+    state.years[yearIndex].semesters[semIndex].subjects.splice(subIndex, 1);
     saveState();
-    renderSemesters();
+    renderYears();
     calculateResults();
 }
 
-function updateSubjectName(semIndex, subIndex, value) {
-    state.semesters[semIndex].subjects[subIndex].name = value.trim();
+function updateSubjectName(yearIndex, semIndex, subIndex, value) {
+    state.years[yearIndex].semesters[semIndex].subjects[subIndex].name = value.trim();
     saveState();
 }
 
-function updateSubjectGrade(semIndex, subIndex, value) {
-    state.semesters[semIndex].subjects[subIndex].grade = value;
+function updateSubjectGrade(yearIndex, semIndex, subIndex, value) {
+    state.years[yearIndex].semesters[semIndex].subjects[subIndex].grade = value;
     saveState();
     calculateResults();
 }
 
-function updateSubjectType(semIndex, subIndex, value) {
-    state.semesters[semIndex].subjects[subIndex].type = value;
+function updateSubjectType(yearIndex, semIndex, subIndex, value) {
+    state.years[yearIndex].semesters[semIndex].subjects[subIndex].type = value;
     saveState();
     calculateResults();
 }
@@ -284,20 +527,21 @@ function getGradePoints(grade) {
     return rubricItem ? rubricItem.points : 0;
 }
 
-function getCredits(type) {
-    return type === 'law' ? 4 : 3;
+function getCredits(typeName) {
+    const typeItem = state.subjectTypes.find(t => t.name === typeName);
+    return typeItem ? typeItem.credits : 0;
 }
 
-function calculateSemesterGPA(semester, semesterIndex) {
+function calculateSemesterGPA(semester, globalSemIndex) {
     let totalPoints = 0;
     let totalCredits = 0;
-    
+
     semester.subjects.forEach(subject => {
-        // Skip English in Semester 1
-        if (semesterIndex === 0 && subject.name.toLowerCase().includes('english')) {
+        // Skip English in Semester 1 (global index 0)
+        if (globalSemIndex === 0 && subject.name.toLowerCase().includes('english')) {
             return;
         }
-        
+
         if (subject.grade) {
             const gradePoints = getGradePoints(subject.grade);
             const credits = getCredits(subject.type);
@@ -305,59 +549,75 @@ function calculateSemesterGPA(semester, semesterIndex) {
             totalCredits += credits;
         }
     });
-    
+
     if (totalCredits === 0) return '-';
-    
+
     const gpa = (totalPoints / totalCredits).toFixed(2);
     return gpa;
 }
 
 function calculateResults() {
     // Update individual semester GPAs
-    state.semesters.forEach((semester, index) => {
-        const gpaElement = document.getElementById(`gpa-${index}`);
-        if (gpaElement) {
-            gpaElement.textContent = calculateSemesterGPA(semester, index);
-        }
-    });
-    
-    // Calculate overall CGPA
     let totalGPA = 0;
     let validSemesters = 0;
-    
-    state.semesters.forEach((semester, index) => {
-        const gpa = calculateSemesterGPA(semester, index);
-        if (gpa !== '-') {
-            totalGPA += parseFloat(gpa);
-            validSemesters++;
-        }
+    let totalYears = 0;
+
+    state.years.forEach((year, yearIndex) => {
+        year.semesters.forEach((semester, semIndex) => {
+            const globalSemIndex = (yearIndex * 2) + semIndex;
+            const gpaElement = document.getElementById(`gpa-${yearIndex}-${semIndex}`);
+            const gpa = calculateSemesterGPA(semester, globalSemIndex);
+
+            if (gpaElement) {
+                gpaElement.textContent = gpa;
+            }
+
+            if (gpa !== '-') {
+                totalGPA += parseFloat(gpa);
+                validSemesters++;
+            }
+        });
     });
-    
+
     const cgpa = validSemesters > 0 ? (totalGPA / validSemesters).toFixed(2) : '-';
-    
+
     // Update results display
-    document.getElementById('totalSemesters').textContent = state.semesters.length;
-    document.getElementById('overallCGPA').textContent = cgpa;
-    
+    const totalSemestersElement = document.getElementById('totalSemesters');
+    const totalYearsElement = document.getElementById('totalYears');
+    const overallCGPAElement = document.getElementById('overallCGPA');
+
+    if (totalSemestersElement) totalSemestersElement.textContent = validSemesters;
+    if (totalYearsElement) totalYearsElement.textContent = state.years.length;
+    if (overallCGPAElement) overallCGPAElement.textContent = cgpa;
+
     // Update semester GPAs breakdown
     renderSemesterGPAsBreakdown();
 }
 
 function renderSemesterGPAsBreakdown() {
     const container = document.getElementById('semesterGPAs');
-    
-    if (state.semesters.length === 0) {
+
+    if (!container) return;
+
+    if (state.years.length === 0) {
         container.innerHTML = '';
         return;
     }
-    
-    container.innerHTML = state.semesters.map((semester, index) => {
-        const gpa = calculateSemesterGPA(semester, index);
-        return `
-            <div class="semester-gpa-item">
-                <div class="semester-gpa-label">Sem ${semester.number}</div>
-                <div class="semester-gpa-value">${gpa}</div>
-            </div>
-        `;
-    }).join('');
+
+    let html = '';
+    state.years.forEach((year, yearIndex) => {
+        year.semesters.forEach((semester, semIndex) => {
+            const globalSemIndex = (yearIndex * 2) + semIndex;
+            const gpa = calculateSemesterGPA(semester, globalSemIndex);
+            const semesterLabel = `Y${year.number}S${semester.number}`;
+            html += `
+                <div class="semester-gpa-item">
+                    <div class="semester-gpa-label">${semesterLabel}</div>
+                    <div class="semester-gpa-value">${gpa}</div>
+                </div>
+            `;
+        });
+    });
+
+    container.innerHTML = html;
 }
