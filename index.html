@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPA/CGPA Calculator - Law School Edition</title>
+    <meta name="description" content="Calculate your GPA and CGPA with a customizable grading rubric. Designed for law school students with support for law and non-law subjects.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="title">
+                <span class="title-icon">🎓</span>
+                GPA Calculator
+            </h1>
+            <p class="subtitle">Law School Edition with Customizable Grading Rubric</p>
+        </header>
+
+        <!-- Grading Rubric Section -->
+        <section class="card rubric-section">
+            <div class="card-header">
+                <h2>
+                    <span class="icon">⚙️</span>
+                    Grading Rubric
+                </h2>
+                <button id="toggleRubric" class="btn btn-secondary">
+                    <span id="toggleRubricText">Edit</span>
+                </button>
+            </div>
+            
+            <div id="rubricDisplay" class="rubric-display">
+                <!-- Rubric items will be displayed here -->
+            </div>
+
+            <div id="rubricEditor" class="rubric-editor hidden">
+                <div id="rubricInputs" class="rubric-inputs">
+                    <!-- Rubric input fields will be generated here -->
+                </div>
+                <div class="rubric-actions">
+                    <button id="addGrade" class="btn btn-outline">
+                        <span class="btn-icon">+</span>
+                        Add Grade
+                    </button>
+                    <button id="resetRubric" class="btn btn-outline">
+                        <span class="btn-icon">↺</span>
+                        Reset to Default
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Semesters Section -->
+        <section class="card semesters-section">
+            <div class="card-header">
+                <h2>
+                    <span class="icon">📚</span>
+                    Semesters
+                </h2>
+                <button id="addSemester" class="btn btn-primary">
+                    <span class="btn-icon">+</span>
+                    Add Semester
+                </button>
+            </div>
+
+            <div id="semestersContainer" class="semesters-container">
+                <!-- Semester cards will be generated here -->
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="card results-section">
+            <div class="card-header">
+                <h2>
+                    <span class="icon">📊</span>
+                    Results
+                </h2>
+            </div>
+
+            <div class="results-grid">
+                <div class="result-card">
+                    <div class="result-label">Total Semesters</div>
+                    <div class="result-value" id="totalSemesters">0</div>
+                </div>
+                <div class="result-card highlight">
+                    <div class="result-label">Overall CGPA</div>
+                    <div class="result-value large" id="overallCGPA">-</div>
+                </div>
+            </div>
+
+            <div id="semesterGPAs" class="semester-gpas">
+                <!-- Individual semester GPAs will be displayed here -->
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>💡 <strong>Note:</strong> English subject in Semester 1 is automatically excluded from GPA calculation</p>
+            <p>📖 Law subjects: 4 credits | Non-law subjects: 3 credits</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
