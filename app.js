@@ -41,6 +41,7 @@ function initializeEventListeners() {
     document.getElementById('addType').addEventListener('click', addSubjectType);
     document.getElementById('resetTypes').addEventListener('click', resetTypes);
     document.getElementById('addYear').addEventListener('click', addYear);
+    document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
 }
 
 // Local Storage Functions
@@ -51,35 +52,70 @@ function saveState() {
 function loadState() {
     const saved = localStorage.getItem('gpaCalculatorState');
     if (saved) {
-        const loadedState = JSON.parse(saved);
-        // Migrate old state format to new format
-        if (loadedState.semesters && !loadedState.years) {
-            // Convert old semester-based format to year-based format
-            state.rubric = loadedState.rubric || [...DEFAULT_RUBRIC];
-            state.subjectTypes = loadedState.subjectTypes || [...DEFAULT_TYPES];
-            state.years = [];
+        try {
+            const loadedState = JSON.parse(saved);
+            // Migrate old state format to new format
+            if (loadedState.semesters && !loadedState.years) {
+                // Convert old semester-based format to year-based format
+                state.rubric = loadedState.rubric || [...DEFAULT_RUBRIC];
+                state.subjectTypes = loadedState.subjectTypes || [...DEFAULT_TYPES];
+                state.years = [];
 
-            // Group semesters into years (2 per year)
-            for (let i = 0; i < loadedState.semesters.length; i += 2) {
-                const yearNumber = Math.floor(i / 2) + 1;
-                const year = {
-                    number: yearNumber,
-                    semesters: [
-                        loadedState.semesters[i] || { number: 1, subjects: [] }
-                    ]
-                };
-                if (loadedState.semesters[i + 1]) {
-                    year.semesters.push(loadedState.semesters[i + 1]);
+                // Group semesters into years (2 per year)
+                for (let i = 0; i < loadedState.semesters.length; i += 2) {
+                    const yearNumber = Math.floor(i / 2) + 1;
+                    const year = {
+                        number: yearNumber,
+                        semesters: [
+                            loadedState.semesters[i] || { number: 1, subjects: [] }
+                        ]
+                    };
+                    if (loadedState.semesters[i + 1]) {
+                        year.semesters.push(loadedState.semesters[i + 1]);
+                    } else {
+                        // Add empty second semester if only one exists
+                        year.semesters.push({ number: 2, subjects: [] });
+                    }
+                    state.years.push(year);
                 }
-                state.years.push(year);
+                // Save migrated state
+                saveState();
+            } else {
+                state = loadedState;
+                // Ensure subjectTypes exists for backward compatibility
+                if (!state.subjectTypes) {
+                    state.subjectTypes = [...DEFAULT_TYPES];
+                }
+                // Ensure years is an array
+                if (!Array.isArray(state.years)) {
+                    state.years = [];
+                }
             }
-        } else {
-            state = loadedState;
-            // Ensure subjectTypes exists for backward compatibility
-            if (!state.subjectTypes) {
-                state.subjectTypes = [...DEFAULT_TYPES];
-            }
+        } catch (e) {
+            console.error('Error loading state:', e);
+            // Reset to default state if there's an error
+            state = {
+                rubric: [...DEFAULT_RUBRIC],
+                subjectTypes: [...DEFAULT_TYPES],
+                years: []
+            };
         }
+    }
+}
+
+function clearAllData() {
+    if (confirm('⚠️ This will delete ALL your data including grades, semesters, and custom settings. This cannot be undone. Are you sure?')) {
+        localStorage.removeItem('gpaCalculatorState');
+        state = {
+            rubric: [...DEFAULT_RUBRIC],
+            subjectTypes: [...DEFAULT_TYPES],
+            years: []
+        };
+        renderRubricDisplay();
+        renderSubjectTypes();
+        renderYears();
+        calculateResults();
+        alert('✅ All data has been cleared!');
     }
 }
 
