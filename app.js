@@ -388,6 +388,7 @@ function renderYears() {
 
 function renderSemester(year, yearIndex, semester, semIndex) {
     const globalSemIndex = (yearIndex * 2) + semIndex;
+    const result = calculateSemesterGPA(semester, globalSemIndex);
     return `
         <div class="semester-card">
             <div class="semester-header">
@@ -405,7 +406,10 @@ function renderSemester(year, yearIndex, semester, semIndex) {
             
             <div class="semester-footer">
                 <div class="semester-gpa">
-                    GPA: <span id="gpa-${yearIndex}-${semIndex}">${calculateSemesterGPA(semester, globalSemIndex)}</span>
+                    GPA: <span id="gpa-${yearIndex}-${semIndex}">${result.gpa}</span>
+                </div>
+                <div class="semester-credits">
+                    Credits: <span id="credits-${yearIndex}-${semIndex}">${result.credits}</span>
                 </div>
             </div>
         </div>
@@ -586,14 +590,16 @@ function calculateSemesterGPA(semester, globalSemIndex) {
         }
     });
 
-    if (totalCredits === 0) return '-';
+    if (totalCredits === 0) {
+        return { gpa: '-', credits: 0 };
+    }
 
     const gpa = (totalPoints / totalCredits).toFixed(2);
-    return gpa;
+    return { gpa, credits: totalCredits };
 }
 
 function calculateResults() {
-    // Update individual semester GPAs
+    // Update individual semester GPAs and credits
     let totalGPA = 0;
     let validSemesters = 0;
     let totalYears = 0;
@@ -602,14 +608,19 @@ function calculateResults() {
         year.semesters.forEach((semester, semIndex) => {
             const globalSemIndex = (yearIndex * 2) + semIndex;
             const gpaElement = document.getElementById(`gpa-${yearIndex}-${semIndex}`);
-            const gpa = calculateSemesterGPA(semester, globalSemIndex);
+            const creditsElement = document.getElementById(`credits-${yearIndex}-${semIndex}`);
+            const result = calculateSemesterGPA(semester, globalSemIndex);
 
             if (gpaElement) {
-                gpaElement.textContent = gpa;
+                gpaElement.textContent = result.gpa;
             }
 
-            if (gpa !== '-') {
-                totalGPA += parseFloat(gpa);
+            if (creditsElement) {
+                creditsElement.textContent = result.credits;
+            }
+
+            if (result.gpa !== '-') {
+                totalGPA += parseFloat(result.gpa);
                 validSemesters++;
             }
         });
@@ -644,12 +655,13 @@ function renderSemesterGPAsBreakdown() {
     state.years.forEach((year, yearIndex) => {
         year.semesters.forEach((semester, semIndex) => {
             const globalSemIndex = (yearIndex * 2) + semIndex;
-            const gpa = calculateSemesterGPA(semester, globalSemIndex);
+            const result = calculateSemesterGPA(semester, globalSemIndex);
             const semesterLabel = `Y${year.number}S${semester.number}`;
             html += `
                 <div class="semester-gpa-item">
                     <div class="semester-gpa-label">${semesterLabel}</div>
-                    <div class="semester-gpa-value">${gpa}</div>
+                    <div class="semester-gpa-value">${result.gpa}</div>
+                    <div class="semester-gpa-credits">${result.credits} cr</div>
                 </div>
             `;
         });

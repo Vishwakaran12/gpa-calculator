@@ -423,6 +423,12 @@ body {
     color: var(--accent-success);
 }
 
+.semester-credits {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
 /* Results Section */
 .results-grid {
     display: grid;
@@ -498,6 +504,12 @@ body {
     font-size: 1.3rem;
     font-weight: 600;
     color: var(--accent-success);
+}
+
+.semester-gpa-credits {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
 }
 
 /* Footer */
